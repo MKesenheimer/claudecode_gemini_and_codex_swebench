@@ -434,6 +434,10 @@ docker ps
 docker run hello-world
 ```
 
+Link docker socket on macOS:
+```bash
+sudo ln -s /Users/$USER/.docker/run/docker.sock /var/run/docker.sock
+```
 
 ## License
 
