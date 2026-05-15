@@ -9,13 +9,13 @@ import argparse
 from pathlib import Path
 from typing import Optional
 
-
 # Verbosity levels mapping
 VERBOSE_LEVELS = {
     'error': logging.ERROR,
     'warning': logging.WARNING,
     'info': logging.INFO,
     'debug': logging.DEBUG,
+    'notset': logging.NOTSET,
 }
 
 # Verbosity display names
@@ -24,6 +24,7 @@ VERBOSE_NAMES = {
     logging.WARNING: 'warning',
     logging.INFO: 'info',
     logging.DEBUG: 'debug',
+    logging.NOTSET: 'notset',
 }
 
 
@@ -116,7 +117,9 @@ class Logger:
 
     def _log(self, level: int, message: str):
         """Internal logging method."""
-        if level <= self._verbose_level:
+        #print(f"level = {level}, self._verbose_level = {self._verbose_level}")
+        #print(message)
+        if level >= self._verbose_level:
             self._logger.log(level, message)
 
     def debug(self, message: str):
@@ -150,6 +153,10 @@ class Logger:
     def is_error(self) -> bool:
         """Check if error level is enabled."""
         return self._verbose_level >= logging.ERROR
+    
+    def is_notset(self) -> bool:
+        """Check if notset level is enabled."""
+        return self._verbose_level >= logging.NOTSET
 
 
 # Global logger instance
@@ -171,8 +178,6 @@ def setup_argument_parser(parser: argparse.ArgumentParser, add_verbose: bool = T
 
 def configure_logging_from_args(verbose_level: str = 'info', log_file: Optional[Path] = None):
     """Configure logging based on verbosity level and log file."""
-    if verbose_level is None:
-        return
     logger.set_verbose_level(verbose_level)
     if log_file:
         logger.set_log_file(log_file)

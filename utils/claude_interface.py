@@ -14,17 +14,18 @@ class ClaudeCodeInterface:
         """Ensure the Claude CLI is available on the system."""
         logger.info("Initializing ClaudeCodeInterface")
         try:
+            logger.debug("Running `claude --version`")
             result = subprocess.run([
                 "claude", "--version"
             ], capture_output=True, text=True)
-            logger.debug("Claude version check returned code %d", result.returncode)
+            logger.debug(f"Claude version check returned code {result.returncode}")
             if result.returncode != 0:
-                logger.error("Claude CLI version check failed: %s", result.stderr.strip())
+                logger.error(f"Claude CLI version check failed: {result.stderr.strip()}")
                 raise RuntimeError(
                     "Claude CLI not found. Please ensure 'claude' is installed and in PATH"
                 )
             else:
-                logger.info("Claude CLI detected: %s", result.stdout.strip())
+                logger.info(f"Claude CLI detected: {result.stdout.strip()}")
         except FileNotFoundError:
             logger.error("Claude CLI executable not found in PATH")
             raise RuntimeError(
@@ -39,24 +40,25 @@ class ClaudeCodeInterface:
             cwd: Working directory to execute in.
             model: Optional model to use (e.g., 'opus-4.1', 'sonnet-3.7').
         """
-        logger.info("Executing Claude Code CLI (cwd=%s, model=%s)", cwd, model)
+        logger.info(f"Executing Claude Code CLI (cwd={cwd}, model={model})")
         try:
             # Save the current directory
             original_cwd = os.getcwd()
-            logger.debug("Saved original working directory: %s", original_cwd)
+            logger.debug(f"Saved original working directory: {original_cwd}")
 
             # Change to the working directory
             os.chdir(cwd)
-            logger.debug("Changed to working directory: %s", cwd)
+            logger.debug(f"Changed to working directory: {cwd}")
 
             # Build command with optional model parameter
             cmd = ["claude", "--dangerously-skip-permissions"]
             if model:
                 cmd.extend(["--model", model])
-            logger.debug("Built CLI command: %s", " ".join(cmd))
+            logger.debug(f"Built CLI command: {' '.join(cmd)}")
 
             # Execute claude command with the prompt via stdin
-            logger.debug("Sending prompt to Claude CLI (%d chars)", len(prompt))
+            logger.debug(f"Sending prompt to Claude CLI ({len(prompt)} chars)")
+            logger.debug(f"Prompt: {prompt}")
             result = subprocess.run(
                 cmd,
                 input=prompt,
@@ -67,12 +69,9 @@ class ClaudeCodeInterface:
 
             # Restore original directory
             os.chdir(original_cwd)
-            logger.debug("Restored original working directory: %s", original_cwd)
-
-            logger.info(
-                "Claude CLI execution complete: success=%s, returncode=%d, stdout=%d chars, stderr=%d chars",
-                result.returncode == 0, result.returncode, len(result.stdout), len(result.stderr),
-            )
+            logger.debug(f"Restored original working directory: {original_cwd}")
+            logger.info(f"Claude CLI execution complete: success={result.returncode == 0}, returncode={result.returncode}, stdout={len(result.stdout)} chars, stderr={len(result.stderr)} chars")
+            logger.debug(f"Result: {result.stdout}")
 
             return {
                 "success": result.returncode == 0,
@@ -92,7 +91,7 @@ class ClaudeCodeInterface:
             }
         except Exception as e:
             os.chdir(original_cwd)
-            logger.error("Unexpected error in Claude CLI execution: %s", str(e))
+            logger.error(f"Unexpected error in Claude CLI execution: {str(e)}")
             return {
                 "success": False,
                 "stdout": "",
@@ -102,7 +101,7 @@ class ClaudeCodeInterface:
 
     def extract_file_changes(self, response: str) -> List[Dict[str, str]]:
         """Extract file changes from Claude's response."""
-        logger.debug("Extracting file changes from Claude response (%d chars)", len(response))
+        logger.debug(f"Extracting file changes from Claude response ({len(response)} chars)")
         # This will be implemented by patch_extractor.py
         # For now, return empty list
         return []

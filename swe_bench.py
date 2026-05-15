@@ -70,7 +70,7 @@ def run_command(args):
     print(f"Backend: {runner.backend}")
     print(f"Evaluation: {'DISABLED' if args.no_eval else 'ENABLED'}")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    if args.verbose is not None:
+    if args.verbose != 'notset':
         print(f"Verbosity: {args.verbose}")
     
     # Run inference
@@ -366,7 +366,7 @@ Examples:
     )
     
     # Create subparsers
-    parser.add_argument('--verbose', '-v', type=str, default=None, choices=['error', 'warning', 'info', 'debug'], help='Set verbosity level')
+    parser.add_argument('--verbose', '-v', type=str, default='notset', choices=['error', 'warning', 'info', 'debug', 'notset'], help='Set verbosity level')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
 
     # RUN command

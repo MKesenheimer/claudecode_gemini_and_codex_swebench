@@ -24,7 +24,7 @@ from utils.gemini_interface import GeminiCodeInterface
 from utils.prompt_formatter import PromptFormatter
 from utils.patch_extractor import PatchExtractor
 from utils.model_registry import get_model_name
-
+from utils.logger_utils import logger, configure_logging_from_args
 
 DEFAULT_BACKEND = os.environ.get("CODE_SWE_BACKEND", "claude")
 
@@ -35,7 +35,9 @@ class CodeSWEAgent:
     def __init__(self, prompt_template: Optional[str] = None,
                  model: Optional[str] = None,
                  backend: str = DEFAULT_BACKEND):
+        
         self.backend = (backend or DEFAULT_BACKEND).lower()
+        logger.debug(f"CodeSWEAgent: backend = {self.backend}")
         if self.backend == "codex":
             self.interface = CodexCodeInterface()
         elif self.backend == "gemini":
@@ -272,8 +274,11 @@ def main():
                        help="Model to use (e.g., opus-4.1, codex-4.2, or any name)")
     parser.add_argument("--backend", type=str, choices=["claude", "codex", "gemini"],
                        help="Code model backend to use")
-    
+    parser.add_argument('--verbose', '-v', type=str, default='notset', choices=['error', 'warning', 'info', 'debug', 'notset'], help='Set verbosity level')
+
     args = parser.parse_args()
+
+    configure_logging_from_args(args.verbose)
     
     backend = args.backend or DEFAULT_BACKEND
 

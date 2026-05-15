@@ -86,6 +86,7 @@ class EnhancedBenchmarkRunner:
         
         try:
             start_time = time.time()
+            logger.debug(f"Running cmd: {cmd}")
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)  # 2 hour timeout
             execution_time = time.time() - start_time
             
@@ -93,7 +94,6 @@ class EnhancedBenchmarkRunner:
                 print(f"⚠️ Warning: Inference had issues but continuing...")
                 if result.stderr:
                     print(f"Stderr: {result.stderr[:500]}")
-                    logger.error(f"Stderr: {result.stderr[:500]}")
             
             # Find the latest prediction file
             pred_files = sorted(self.predictions_dir.glob("predictions_*.jsonl"), reverse=True)
