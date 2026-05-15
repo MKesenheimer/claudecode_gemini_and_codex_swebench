@@ -1,24 +1,31 @@
 import tempfile
 from pathlib import Path
 from typing import Dict, Optional
+from utils.logger_utils import logger
 
 class PromptFormatter:
     """Format SWE-bench issues into prompts for Claude Code."""
     
     def __init__(self, prompt_template_path: Optional[str] = None):
+        logger.info("Initializing PromptFormatter (template=%s)", prompt_template_path)
         self.prompt_template_path = prompt_template_path
         self.base_template = self._load_base_template()
-        
+
     def _load_base_template(self) -> str:
         """Load the base prompt template."""
         if self.prompt_template_path:
             try:
+                logger.debug("Loading prompt template from: %s", self.prompt_template_path)
                 with open(self.prompt_template_path, 'r') as f:
-                    return f.read()
+                    content = f.read()
+                logger.info("Loaded prompt template (%d chars)", len(content))
+                return content
             except FileNotFoundError:
+                logger.warning("Prompt template file not found: %s, using default", self.prompt_template_path)
                 pass
-        
+
         # Default template if no file provided
+        logger.debug("Using default prompt template")
         return """You are being evaluated on SWE-bench. You have access to a repository with a software issue that needs to be fixed.
 
 Repository: {repo_name}
@@ -45,17 +52,20 @@ Base directory: {base_path}
     
     def format_issue(self, instance: Dict) -> str:
         """Format a SWE-bench instance into a prompt for Claude Code."""
+        logger.info("Formatting SWE-bench instance (id=%s)", instance.get("instance_id", ""))
         # Extract key information from the instance
         repo_name = instance.get("repo", "")
         issue_title = instance.get("problem_statement", "").split('\n')[0]
         issue_description = instance.get("problem_statement", "")
         base_commit = instance.get("base_commit", "")
-        
+        logger.debug("Instance details - repo: %s, title: %s, commit: %s", repo_name, issue_title, base_commit)
+
         # Get instance_id for tracking
         instance_id = instance.get("instance_id", "")
-        
+
         # Format the prompt
         base_path = Path(tempfile.gettempdir()) / f"swe_bench_{instance_id}"
+        logger.debug("Using base path: %s", base_path)
 
         prompt = self.base_template.format(
             repo_name=repo_name,
@@ -65,23 +75,26 @@ Base directory: {base_path}
             instance_id=instance_id,
             base_commit=base_commit,
         )
-        
+        logger.debug("Formatted prompt length: %d chars", len(prompt))
+
         # Add any hints if available
         if "hints_text" in instance and instance["hints_text"]:
             prompt += f"\n\nHints:\n{instance['hints_text']}"
-            
+            logger.debug("Added hints text (%d chars)", len(instance['hints_text']))
+
         return prompt
-    
+
     def format_for_cli(self, instance: Dict) -> str:
         """Format the prompt for Claude Code CLI execution."""
+        logger.debug("Formatting prompt for CLI execution")
         base_prompt = self.format_issue(instance)
 
         # Return the raw prompt without escaping for CLI input
         return base_prompt
-    
+
     def extract_instance_info(self, instance: Dict) -> Dict:
         """Extract key information from a SWE-bench instance."""
-        return {
+        info = {
             "instance_id": instance.get("instance_id", ""),
             "repo": instance.get("repo", ""),
             "version": instance.get("version", ""),
@@ -92,3 +105,5 @@ Base directory: {base_path}
             "test_patch": instance.get("test_patch", ""),
             "environment_setup_commit": instance.get("environment_setup_commit", "")
         }
+        logger.debug("Extracted instance info: %s", {k: v for k, v in info.items() if v})
+        return info

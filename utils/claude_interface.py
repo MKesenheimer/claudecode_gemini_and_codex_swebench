@@ -3,6 +3,7 @@ import json
 import subprocess
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
+from utils.logger_utils import logger
 
 load_dotenv()
 
@@ -11,15 +12,21 @@ class ClaudeCodeInterface:
 
     def __init__(self):
         """Ensure the Claude CLI is available on the system."""
+        logger.info("Initializing ClaudeCodeInterface")
         try:
             result = subprocess.run([
                 "claude", "--version"
             ], capture_output=True, text=True)
+            logger.debug("Claude version check returned code %d", result.returncode)
             if result.returncode != 0:
+                logger.error("Claude CLI version check failed: %s", result.stderr.strip())
                 raise RuntimeError(
                     "Claude CLI not found. Please ensure 'claude' is installed and in PATH"
                 )
+            else:
+                logger.info("Claude CLI detected: %s", result.stdout.strip())
         except FileNotFoundError:
+            logger.error("Claude CLI executable not found in PATH")
             raise RuntimeError(
                 "Claude CLI not found. Please ensure 'claude' is installed and in PATH"
             )
@@ -32,19 +39,24 @@ class ClaudeCodeInterface:
             cwd: Working directory to execute in.
             model: Optional model to use (e.g., 'opus-4.1', 'sonnet-3.7').
         """
+        logger.info("Executing Claude Code CLI (cwd=%s, model=%s)", cwd, model)
         try:
             # Save the current directory
             original_cwd = os.getcwd()
+            logger.debug("Saved original working directory: %s", original_cwd)
 
             # Change to the working directory
             os.chdir(cwd)
+            logger.debug("Changed to working directory: %s", cwd)
 
             # Build command with optional model parameter
             cmd = ["claude", "--dangerously-skip-permissions"]
             if model:
                 cmd.extend(["--model", model])
+            logger.debug("Built CLI command: %s", " ".join(cmd))
 
             # Execute claude command with the prompt via stdin
+            logger.debug("Sending prompt to Claude CLI (%d chars)", len(prompt))
             result = subprocess.run(
                 cmd,
                 input=prompt,
@@ -55,6 +67,12 @@ class ClaudeCodeInterface:
 
             # Restore original directory
             os.chdir(original_cwd)
+            logger.debug("Restored original working directory: %s", original_cwd)
+
+            logger.info(
+                "Claude CLI execution complete: success=%s, returncode=%d, stdout=%d chars, stderr=%d chars",
+                result.returncode == 0, result.returncode, len(result.stdout), len(result.stderr),
+            )
 
             return {
                 "success": result.returncode == 0,
@@ -65,6 +83,7 @@ class ClaudeCodeInterface:
 
         except subprocess.TimeoutExpired:
             os.chdir(original_cwd)
+            logger.warning("Claude CLI command timed out after 10 minutes")
             return {
                 "success": False,
                 "stdout": "",
@@ -73,6 +92,7 @@ class ClaudeCodeInterface:
             }
         except Exception as e:
             os.chdir(original_cwd)
+            logger.error("Unexpected error in Claude CLI execution: %s", str(e))
             return {
                 "success": False,
                 "stdout": "",
@@ -82,6 +102,7 @@ class ClaudeCodeInterface:
 
     def extract_file_changes(self, response: str) -> List[Dict[str, str]]:
         """Extract file changes from Claude's response."""
+        logger.debug("Extracting file changes from Claude response (%d chars)", len(response))
         # This will be implemented by patch_extractor.py
         # For now, return empty list
         return []

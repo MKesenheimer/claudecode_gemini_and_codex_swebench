@@ -14,9 +14,11 @@ from pathlib import Path
 import logging
 import jsonlines
 from datasets import load_dataset
+from utils.logger_utils import logger
 
 class EnhancedBenchmarkRunner:
     def __init__(self, model=None, backend="claude"):
+        logger.info(f"Initializing EnhancedBenchmarkRunner (model={model}, backend={backend})")
         self.base_dir = Path.cwd()
         self.log_file = self.base_dir / "benchmark_scores.log"
         self.predictions_dir = self.base_dir / "predictions"
@@ -24,18 +26,20 @@ class EnhancedBenchmarkRunner:
         self.eval_results_dir = self.base_dir / "evaluation_results"
         self.model = model
         self.backend = backend
-        
+
         # Create directories
         self.predictions_dir.mkdir(exist_ok=True)
         self.results_dir.mkdir(exist_ok=True)
         self.eval_results_dir.mkdir(exist_ok=True)
+        logger.debug(f"Created directories: predictions={self.predictions_dir}, results={self.results_dir}, eval_results={self.eval_results_dir}")
         
-    def log_result(self, dataset_name, num_instances, generation_score, 
-                   evaluation_score, generation_time, evaluation_time, 
+    def log_result(self, dataset_name, num_instances, generation_score,
+                   evaluation_score, generation_time, evaluation_time,
                    prediction_file, notes="", evaluation_status="pending"):
         """Log comprehensive benchmark results"""
+        logger.info(f"Logging result (dataset={dataset_name}, instances={num_instances}, gen_score={generation_score}, eval_score={evaluation_score}, status={evaluation_status})")
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
+
         log_entry = {
             "timestamp": timestamp,
             "prediction_file": str(prediction_file),
@@ -50,11 +54,11 @@ class EnhancedBenchmarkRunner:
             "backend": self.backend,
             "notes": notes
         }
-        
+
         # Append to log file
         with open(self.log_file, 'a') as f:
             f.write(json.dumps(log_entry) + '\n')
-        
+
         print(f"\n✅ Results logged to {self.log_file}")
         if evaluation_status == "completed":
             print(f"   Generation Score: {generation_score:.2f}% (patches created)")
@@ -65,6 +69,7 @@ class EnhancedBenchmarkRunner:
             
     def run_inference(self, dataset_name, limit):
         """Run code model on the dataset"""
+        logger.info("Run code model on the dataset")
         model_info = f" with model {self.model}" if self.model else ""
         print(f"\n🚀 Running {self.backend.title()} Code{model_info} on {dataset_name} (limit: {limit})...")
 
@@ -88,6 +93,7 @@ class EnhancedBenchmarkRunner:
                 print(f"⚠️ Warning: Inference had issues but continuing...")
                 if result.stderr:
                     print(f"Stderr: {result.stderr[:500]}")
+                    logger.error(f"Stderr: {result.stderr[:500]}")
             
             # Find the latest prediction file
             pred_files = sorted(self.predictions_dir.glob("predictions_*.jsonl"), reverse=True)

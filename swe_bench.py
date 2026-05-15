@@ -33,6 +33,8 @@ from run_benchmark_with_eval import EnhancedBenchmarkRunner
 from evaluate_predictions import PredictionEvaluator
 from show_scores import ScoreViewer
 from utils.model_registry import list_models, get_model_name
+from utils.logger_utils import configure_logging_from_args
+from utils.logger_utils import logger
 from code_swe_agent import DEFAULT_BACKEND
 
 def run_command(args):
@@ -68,6 +70,8 @@ def run_command(args):
     print(f"Backend: {runner.backend}")
     print(f"Evaluation: {'DISABLED' if args.no_eval else 'ENABLED'}")
     print(f"Timestamp: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    if args.verbose is not None:
+        print(f"Verbosity: {args.verbose}")
     
     # Run inference
     print(f"\nPhase 1: Generating patches with {runner.backend.title()} Code...")
@@ -362,8 +366,9 @@ Examples:
     )
     
     # Create subparsers
+    parser.add_argument('--verbose', '-v', type=str, default=None, choices=['error', 'warning', 'info', 'debug'], help='Set verbosity level')
     subparsers = parser.add_subparsers(dest='command', help='Commands')
-    
+
     # RUN command
     run_parser = subparsers.add_parser('run', help='Run new benchmark')
     run_parser.add_argument('--limit', type=int, help='Number of instances')
@@ -410,7 +415,9 @@ Examples:
     list_parser.add_argument('--backend', type=str, choices=['claude', 'codex', 'gemini'], help='Backend to list')
     
     args = parser.parse_args()
-    
+
+    configure_logging_from_args(args.verbose)
+
     # Default to full test if no command specified
     if not args.command:
         args.command = 'run'

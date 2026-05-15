@@ -171,6 +171,8 @@ def setup_argument_parser(parser: argparse.ArgumentParser, add_verbose: bool = T
 
 def configure_logging_from_args(verbose_level: str = 'info', log_file: Optional[Path] = None):
     """Configure logging based on verbosity level and log file."""
+    if verbose_level is None:
+        return
     logger.set_verbose_level(verbose_level)
     if log_file:
         logger.set_log_file(log_file)
