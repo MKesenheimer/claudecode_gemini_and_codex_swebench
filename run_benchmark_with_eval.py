@@ -89,13 +89,27 @@ class EnhancedBenchmarkRunner:
         try:
             start_time = time.time()
             logger.debug(f"Running cmd: {cmd}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=7200)  # 2 hour timeout
+
+            # Use Popen to stream output in real-time
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1,
+            )
+
+            # Print output in real-time
+            output_lines = []
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+
+            process.wait()
             execution_time = time.time() - start_time
-            
-            if result.returncode != 0:
-                print(f"⚠️ Warning: Inference had issues but continuing...")
-                if result.stderr:
-                    print(f"Stderr: {result.stderr[:500]}")
+
+            if process.returncode != 0:
+                print(f"\n⚠️ Warning: Inference had issues but continuing...")
             
             # Find the latest prediction file
             pred_files = sorted(self.predictions_dir.glob("predictions_*.jsonl"), reverse=True)

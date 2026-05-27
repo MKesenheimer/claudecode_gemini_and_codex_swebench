@@ -10,15 +10,30 @@ class GeminiCodeInterface:
         """Ensure the Gemini CLI is available on the system."""
         logger.info("Initializing GeminiCodeInterface")
         try:
-            result = subprocess.run(["gemini", "--version"], capture_output=True, text=True)
-            logger.debug(f"Gemini version check returned code {result.returncode}")
-            if result.returncode != 0:
-                logger.error(f"Gemini CLI version check failed: {result.stderr.strip()}")
+            print("Checking Gemini CLI...")
+            output_lines = []
+            process = subprocess.Popen(
+                ["gemini", "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
+
+            stdout_output = ''.join(output_lines)
+            logger.debug(f"Gemini version check returned code {process.returncode}")
+            if process.returncode != 0:
+                logger.error(f"Gemini CLI version check failed: {stdout_output.strip()}")
                 raise RuntimeError(
                     "Gemini CLI not found. Please ensure 'gemini' is installed and in PATH"
                 )
             else:
-                logger.info(f"Gemini CLI detected: {result.stdout.strip()}")
+                logger.info(f"Gemini CLI detected: {stdout_output.strip()}")
         except FileNotFoundError:
             logger.error("Gemini CLI executable not found in PATH")
             raise RuntimeError(
@@ -48,24 +63,35 @@ class GeminiCodeInterface:
 
             # Execute gemini command with the prompt via stdin
             logger.debug(f"Sending prompt to Gemini CLI ({len(prompt)} chars)")
-            result = subprocess.run(
+
+            # Use Popen to stream output in real-time
+            process = subprocess.Popen(
                 cmd,
-                input=prompt,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
+                bufsize=1,
                 timeout=600,  # 10 minute timeout
             )
+
+            # Stream output in real-time
+            output_lines = []
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
 
             os.chdir(original_cwd)
             logger.debug(f"Restored original working directory: {original_cwd}")
 
-            logger.info(f"Gemini CLI execution complete: success={result.returncode == 0}, returncode={result.returncode}, stdout={len(result.stdout)} chars, stderr={len(result.stderr)} chars")
+            logger.info(f"Gemini CLI execution complete: success={process.returncode == 0}, returncode={process.returncode}, stdout={len(process.stdout)} chars, stderr={len(process.stderr)} chars")
 
             return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
+                "success": process.returncode == 0,
+                "stdout": process.stdout,
+                "stderr": process.stderr,
+                "returncode": process.returncode,
             }
 
         except subprocess.TimeoutExpired:

@@ -12,6 +12,7 @@ class PatchExtractor:
     
     def __init__(self):
         logger.info("Initializing PatchExtractor")
+        print("Initializing PatchExtractor...")
         self.file_edit_pattern = re.compile(
             r"(?:Creating|Editing|Modifying|Writing to) file: (.*?)$",
             re.MULTILINE
@@ -33,28 +34,37 @@ class PatchExtractor:
 
             # First, add any untracked files to the index so they appear in diff
             logger.debug("Running git add -N .")
-            subprocess.run(
+            subprocess.Popen(
                 ["git", "add", "-N", "."],
-                capture_output=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
                 text=True
             )
 
             # Get the diff against HEAD to capture all changes
             logger.debug("Running git diff HEAD --no-color --no-ext-diff")
-            result = subprocess.run(
+            output_lines = []
+            process = subprocess.Popen(
                 ["git", "diff", "HEAD", "--no-color", "--no-ext-diff"],
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
 
             os.chdir(original_cwd)
             logger.debug(f"Restored working directory: {original_cwd}")
 
-            if result.returncode == 0:
-                logger.debug(f"Git diff succeeded ({len(result.stdout)} chars of output)")
-                return result.stdout
+            if process.returncode == 0:
+                logger.debug(f"Git diff succeeded ({len(''.join(output_lines))} chars of output)")
+                return ''.join(output_lines)
             else:
-                logger.warning(f"Git diff failed: {result.stderr.strip()}")
+                logger.warning(f"Git diff failed: {''.join(output_lines).strip() if output_lines else ''}")
                 return ""
 
         except Exception as e:
@@ -157,19 +167,27 @@ class PatchExtractor:
             os.chdir(repo_path)
             
             # Test patch application
-            result = subprocess.run(
+            output_lines = []
+            process = subprocess.Popen(
                 ["git", "apply", "--check", patch_file],
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
             )
-            
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
+
             os.chdir(original_cwd)
             os.unlink(patch_file)
-            
-            if result.returncode == 0:
+
+            if process.returncode == 0:
                 return True, "Patch can be applied cleanly"
             else:
-                return False, f"Patch application failed: {result.stderr}"
+                return False, f"Patch application failed: {''.join(output_lines)}"
                 
         except Exception as e:
             return False, f"Error testing patch: {str(e)}"

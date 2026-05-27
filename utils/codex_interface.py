@@ -10,15 +10,30 @@ class CodexCodeInterface:
         """Ensure the Codex CLI is available on the system."""
         logger.info("Initializing CodexCodeInterface")
         try:
-            result = subprocess.run(["codex", "--version"], capture_output=True, text=True)
-            logger.debug(f"Codex version check returned code {result.returncode}")
-            if result.returncode != 0:
-                logger.error(f"Codex CLI version check failed: {result.stderr.strip()}")
+            print("Checking Codex CLI...")
+            output_lines = []
+            process = subprocess.Popen(
+                ["codex", "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
+
+            stdout_output = ''.join(output_lines)
+            logger.debug(f"Codex version check returned code {process.returncode}")
+            if process.returncode != 0:
+                logger.error(f"Codex CLI version check failed: {stdout_output.strip()}")
                 raise RuntimeError(
                     "Codex CLI not found. Please ensure 'codex' is installed and in PATH"
                 )
             else:
-                logger.info(f"Codex CLI detected: {result.stdout.strip()}")
+                logger.info(f"Codex CLI detected: {stdout_output.strip()}")
         except FileNotFoundError:
             logger.error("Codex CLI executable not found in PATH")
             raise RuntimeError(
@@ -38,24 +53,36 @@ class CodexCodeInterface:
                 cmd.extend(["--model", model])
             logger.debug(f"Built CLI command: {' '.join(cmd)}")
             logger.debug(f"Sending prompt to Codex CLI ({len(prompt)} chars)")
-            result = subprocess.run(
+
+            # Use Popen to stream output in real-time
+            process = subprocess.Popen(
                 cmd,
-                input=prompt,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
+                bufsize=1,
                 timeout=600,
             )
+
+            # Stream output in real-time
+            output_lines = []
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
+
             os.chdir(original_cwd)
             logger.debug(f"Restored original working directory: {original_cwd}")
             logger.info(
                 "Codex CLI execution complete: success=%s, returncode=%d, stdout=%d chars, stderr=%d chars",
-                result.returncode == 0, result.returncode, len(result.stdout), len(result.stderr),
+                process.returncode == 0, process.returncode, len(process.stdout), len(process.stderr),
             )
             return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
+                "success": process.returncode == 0,
+                "stdout": process.stdout,
+                "stderr": process.stderr,
+                "returncode": process.returncode,
             }
         except subprocess.TimeoutExpired:
             os.chdir(original_cwd)

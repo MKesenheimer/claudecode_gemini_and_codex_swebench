@@ -82,32 +82,47 @@ class CodeSWEAgent:
             # Clone repository
             print(f"Cloning {repo_name} to {temp_dir}")
             clone_url = f"https://github.com/{repo_name}.git"
-            
-            result = subprocess.run(
+
+            # Use Popen to stream output in real-time
+            print(f"Cloning {clone_url}...")
+            process = subprocess.Popen(
                 ["git", "clone", clone_url, str(temp_dir)],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                cwd=str(original_dir)  # Ensure we're in a valid directory
+                cwd=str(original_dir),
+                bufsize=1
             )
-            
-            if result.returncode != 0:
-                print(f"Failed to clone repository: {result.stderr}")
-                return None
-                
-            # Checkout base commit
-            os.chdir(temp_dir)
-            result = subprocess.run(
-                ["git", "checkout", base_commit],
-                capture_output=True,
-                text=True
-            )
-            
-            if result.returncode != 0:
-                print(f"Failed to checkout commit: {result.stderr}")
-                os.chdir(str(original_dir))  # Return to original directory
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+            process.wait()
+
+            if process.returncode != 0:
+                print(f"Failed to clone repository")
                 return None
 
-            os.chdir(str(original_dir))  # Return to original directory
+            # Checkout base commit
+            print(f"Checking out {base_commit}...")
+            os.chdir(temp_dir)
+            process = subprocess.Popen(
+                ["git", "checkout", base_commit],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+            process.wait()
+
+            if process.returncode != 0:
+                print(f"Failed to checkout commit")
+                os.chdir(str(original_dir))
+                return None
+
+            os.chdir(str(original_dir))
             return str(temp_dir)
             
         except Exception as e:
@@ -139,8 +154,8 @@ class CodeSWEAgent:
             prompt = self.prompt_formatter.format_for_cli(instance)
 
             os.chdir(repo_path)
-            subprocess.run(["git", "add", "-A"], capture_output=True)
-            subprocess.run(["git", "stash"], capture_output=True)
+            subprocess.Popen(["git", "add", "-A"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
+            subprocess.Popen(["git", "stash"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, text=True)
 
             model_info = f" with model {self.model_alias}" if self.model else ""
             print(f"Running {self.backend.title()} Code{model_info}...")
@@ -291,8 +306,20 @@ def main():
         cli_cmd = "claude"
 
     try:
-        result = subprocess.run([cli_cmd, "--version"], capture_output=True, text=True)
-        if result.returncode != 0:
+        print(f"Checking {cli_cmd} CLI...")
+        process = subprocess.Popen(
+            [cli_cmd, "--version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        for line in iter(process.stdout.readline, ''):
+            print(line, end='')
+        process.wait()
+
+        if process.returncode != 0:
             print(f"Error: {cli_cmd} CLI not found. Please ensure '{cli_cmd}' is installed and in PATH")
             sys.exit(1)
     except FileNotFoundError:

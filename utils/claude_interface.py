@@ -16,17 +16,30 @@ class ClaudeCodeInterface:
         logger.info("Initializing ClaudeCodeInterface")
         try:
             logger.debug("Running `claude --version`")
-            result = subprocess.run([
-                "claude", "--version"
-            ], capture_output=True, text=True)
-            logger.debug(f"Claude version check returned code {result.returncode}")
-            if result.returncode != 0:
-                logger.error(f"Claude CLI version check failed: {result.stderr.strip()}")
+            print("Checking Claude CLI...")
+            output_lines = []
+            process = subprocess.Popen(
+                ["claude", "--version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                bufsize=1
+            )
+
+            for line in iter(process.stdout.readline, ''):
+                print(line, end='')
+                output_lines.append(line)
+            process.wait()
+
+            stdout_output = ''.join(output_lines)
+            logger.debug(f"Claude version check returned code {process.returncode}")
+            if process.returncode != 0:
+                logger.error(f"Claude CLI version check failed: {stdout_output.strip()}")
                 raise RuntimeError(
                     "Claude CLI not found. Please ensure 'claude' is installed and in PATH"
                 )
             else:
-                logger.info(f"Claude CLI detected: {result.stdout.strip()}")
+                logger.info(f"Claude CLI detected: {stdout_output.strip()}")
         except FileNotFoundError:
             logger.error("Claude CLI executable not found in PATH")
             raise RuntimeError(
