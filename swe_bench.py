@@ -42,6 +42,7 @@ def run_command(args):
     runner = EnhancedBenchmarkRunner(
         model=args.model if hasattr(args, 'model') else None,
         backend=args.backend if hasattr(args, 'backend') and args.backend else DEFAULT_BACKEND,
+        verbose=args.verbose if hasattr(args, 'verbose') else "notset",
     )
     
     # Set default limit if not specified

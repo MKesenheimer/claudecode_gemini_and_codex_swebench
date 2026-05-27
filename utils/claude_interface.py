@@ -1,6 +1,7 @@
 import os
 import json
 import subprocess
+import threading
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
 from utils.logger_utils import logger
@@ -33,7 +34,8 @@ class ClaudeCodeInterface:
             )
 
     def execute_code_cli(self, prompt: str, cwd: str, model: str = None) -> Dict[str, any]:
-        """Execute Claude Code via CLI and capture the response.
+        """Execute Claude Code via CLI and stream the response in real-time.
+        Intermediate output is displayed as it's generated.
 
         Args:
             prompt: The prompt to send to Claude.
@@ -59,44 +61,60 @@ class ClaudeCodeInterface:
             # Execute claude command with the prompt via stdin
             logger.debug(f"Sending prompt to Claude CLI ({len(prompt)} chars)")
             logger.debug(f"Prompt: {prompt}")
-            result = subprocess.run(
+
+            # Create a thread to stream output in real-time
+            def stream_output():
+                try:
+                    for line in iter(process.stdout.readline, ''):
+                        if line:
+                            # Print intermediate output directly
+                            print(line, end='', flush=True)
+                            logger.info(line.strip() if line.strip() else '')
+                except Exception as e:
+                    logger.error(f"Error streaming output: {e}")
+
+            # Execute claude command with streaming output
+            process = subprocess.Popen(
                 cmd,
-                input=prompt,
-                capture_output=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=600,  # 10 minute timeout
             )
+            output_thread = threading.Thread(target=stream_output, daemon=True)
+            output_thread.start()
+
+            # Wait for process to complete with timeout
+            try:
+                stdout, stderr = process.communicate(input=prompt, timeout=600)
+                process_returncode = process.returncode
+            except subprocess.TimeoutExpired:
+                process.kill()
+                stdout, stderr = process.communicate()
+                process_returncode = -1
+                raise subprocess.TimeoutExpired(cmd, 600)
 
             # Restore original directory
             os.chdir(original_cwd)
             logger.debug(f"Restored original working directory: {original_cwd}")
-            logger.info(f"Claude CLI execution complete: success={result.returncode == 0}, returncode={result.returncode}, stdout={len(result.stdout)} chars, stderr={len(result.stderr)} chars")
-            logger.debug(f"Result: {result.stdout}")
+            logger.info(f"Claude CLI execution complete: success={process_returncode == 0}, returncode={process_returncode}, stdout={len(stdout)} chars, stderr={len(stderr)} chars")
+            logger.debug(f"Result: {stdout}")
 
             return {
-                "success": result.returncode == 0,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-                "returncode": result.returncode,
+                "success": process_returncode == 0,
+                "stdout": stdout,
+                "stderr": stderr,
+                "returncode": process_returncode,
             }
 
-        except subprocess.TimeoutExpired:
-            os.chdir(original_cwd)
-            logger.warning("Claude CLI command timed out after 10 minutes")
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": "Command timed out after 10 minutes",
-                "returncode": -1,
-            }
         except Exception as e:
             os.chdir(original_cwd)
             logger.error(f"Unexpected error in Claude CLI execution: {str(e)}")
             return {
                 "success": False,
-                "stdout": "",
-                "stderr": str(e),
-                "returncode": -1,
+                "stdout": stdout if 'stdout' in locals() else "",
+                "stderr": stderr if 'stderr' in locals() else str(e),
+                "returncode": process.returncode if 'process' in locals() else -1,
             }
 
     def extract_file_changes(self, response: str) -> List[Dict[str, str]]:

@@ -17,8 +17,8 @@ from datasets import load_dataset
 from utils.logger_utils import logger
 
 class EnhancedBenchmarkRunner:
-    def __init__(self, model=None, backend="claude"):
-        logger.info(f"Initializing EnhancedBenchmarkRunner (model={model}, backend={backend})")
+    def __init__(self, model=None, backend="claude", verbose="notset"):
+        logger.info(f"Initializing EnhancedBenchmarkRunner (model={model}, backend={backend}, verbose={verbose})")
         self.base_dir = Path.cwd()
         self.log_file = self.base_dir / "benchmark_scores.log"
         self.predictions_dir = self.base_dir / "predictions"
@@ -26,6 +26,7 @@ class EnhancedBenchmarkRunner:
         self.eval_results_dir = self.base_dir / "evaluation_results"
         self.model = model
         self.backend = backend
+        self.verbose = verbose
 
         # Create directories
         self.predictions_dir.mkdir(exist_ok=True)
@@ -79,6 +80,7 @@ class EnhancedBenchmarkRunner:
             "--dataset_name", dataset_name,
             "--limit", str(limit),
             "--backend", self.backend,
+            "--verbose", self.verbose
         ]
 
         if self.model:
@@ -261,10 +263,11 @@ def main():
                        help="Max parallel Docker containers for evaluation (default: 2)")
     parser.add_argument("--notes", default="",
                        help="Optional notes about this run")
+    parser.add_argument('--verbose', '-v', type=str, default='notset', choices=['error', 'warning', 'info', 'debug', 'notset'], help='Set verbosity level')
     
     args = parser.parse_args()
     
-    runner = EnhancedBenchmarkRunner()
+    runner = EnhancedBenchmarkRunner(verbose=args.verbose)
     
     print("="*60)
     print("Enhanced SWE-bench Benchmark Runner")
