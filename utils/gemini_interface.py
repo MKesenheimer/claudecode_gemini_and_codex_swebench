@@ -72,7 +72,7 @@ class GeminiCodeInterface:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                timeout=600,  # 10 minute timeout
+                timeout=3600,
             )
 
             # Stream output in real-time

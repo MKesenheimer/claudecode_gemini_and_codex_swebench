@@ -99,13 +99,13 @@ class ClaudeCodeInterface:
 
             # Wait for process to complete with timeout
             try:
-                stdout, stderr = process.communicate(input=prompt, timeout=600)
+                stdout, stderr = process.communicate(input=prompt, timeout=3600)
                 process_returncode = process.returncode
             except subprocess.TimeoutExpired:
                 process.kill()
                 stdout, stderr = process.communicate()
                 process_returncode = -1
-                raise subprocess.TimeoutExpired(cmd, 600)
+                raise subprocess.TimeoutExpired(cmd, 3600)
 
             # Restore original directory
             os.chdir(original_cwd)

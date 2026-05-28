@@ -62,7 +62,7 @@ class CodexCodeInterface:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                timeout=600,
+                timeout=3600,
             )
 
             # Stream output in real-time
