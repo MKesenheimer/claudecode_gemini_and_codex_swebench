@@ -47,7 +47,7 @@ class ScoreViewer:
             scores = [s for s in scores if s.get("evaluation_status") != "completed"]
         
         print("\n" + "="*140)
-        print(f"{'Timestamp':<20} {'Instances':>10} {'Model':>40} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
+        print(f"{'Timestamp':<20} {'Model':>40} {'Instances':>10} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
         print("="*140)
         
         for entry in scores:
@@ -75,7 +75,7 @@ class ScoreViewer:
             else:
                 status_str = "? " + status[:10]
             
-            print(f"{timestamp:<20} {instances:>10} {model:>40} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
+            print(f"{timestamp:<20} {model:>40} {instances:>10} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
         
         print("="*140)
     
@@ -186,8 +186,8 @@ class ScoreViewer:
         
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = [
-                'timestamp', 'dataset', 'num_instances', 
-                'model', 'generation_score', 
+                'timestamp', 'dataset', 'model', 
+                'num_instances', 'generation_score', 
                 'evaluation_score', 'evaluation_status', 
                 'generation_time', 'evaluation_time', 'notes'
             ]
@@ -211,7 +211,7 @@ class ScoreViewer:
                 timestamp = entry.get("timestamp", "Unknown")
                 instances = entry.get("num_instances", 0)
                 model = entry.get("model", "unknown")
-                pending.append((timestamp, pred_file, instances, model))
+                pending.append((timestamp, pred_file, model, instances))
         
         if not pending:
             print("\n✅ All runs have been evaluated!")
@@ -221,7 +221,7 @@ class ScoreViewer:
         print(f"PENDING EVALUATIONS ({len(pending)} runs)")
         print("="*60)
         
-        for timestamp, pred_file, instances, model in pending:
+        for timestamp, pred_file, model, instances in pending:
             filename = Path(pred_file).name if pred_file != "Unknown" else "Unknown"
             print(f"  {timestamp[:19]}: {filename} ({instances} instances)")
         
