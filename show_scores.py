@@ -46,9 +46,9 @@ class ScoreViewer:
         elif filter_type == "pending":
             scores = [s for s in scores if s.get("evaluation_status") != "completed"]
         
-        print("\n" + "="*100)
+        print("\n" + "="*140)
         print(f"{'Timestamp':<20} {'Instances':>10} {'Model':>40} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
-        print("="*100)
+        print("="*140)
         
         for entry in scores:
             timestamp = entry.get("timestamp", "Unknown")[:19]
@@ -77,7 +77,7 @@ class ScoreViewer:
             
             print(f"{timestamp:<20} {instances:>10} {model:>40} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
         
-        print("="*100)
+        print("="*140)
     
     def show_statistics(self, scores: List[Dict]):
         """Show statistics and trends"""
