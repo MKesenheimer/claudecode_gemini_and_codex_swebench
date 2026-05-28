@@ -47,7 +47,7 @@ class ScoreViewer:
             scores = [s for s in scores if s.get("evaluation_status") != "completed"]
         
         print("\n" + "="*100)
-        print(f"{'Timestamp':<20} {'Instances':>10} {'Model':>30} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
+        print(f"{'Timestamp':<20} {'Instances':>10} {'Model':>40} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
         print("="*100)
         
         for entry in scores:
@@ -75,7 +75,7 @@ class ScoreViewer:
             else:
                 status_str = "? " + status[:10]
             
-            print(f"{timestamp:<20} {instances:>10} {model:>30} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
+            print(f"{timestamp:<20} {instances:>10} {model:>40} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
         
         print("="*100)
     
