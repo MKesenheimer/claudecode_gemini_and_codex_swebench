@@ -47,7 +47,7 @@ class ScoreViewer:
             scores = [s for s in scores if s.get("evaluation_status") != "completed"]
         
         print("\n" + "="*100)
-        print(f"{'Timestamp':<20} {'Instances':>10} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
+        print(f"{'Timestamp':<20} {'Instances':>10} {'Model':>20} {'Gen Score':>10} {'Eval Score':>10} {'Status':<12} {'Notes'}")
         print("="*100)
         
         for entry in scores:
@@ -56,6 +56,7 @@ class ScoreViewer:
             gen_score = entry.get("generation_score", 0)
             eval_score = entry.get("evaluation_score")
             status = entry.get("evaluation_status", "unknown")
+            model = entry.get("model", "unknown")
             notes = entry.get("notes", "")[:30]
             
             # Format eval score
@@ -74,7 +75,7 @@ class ScoreViewer:
             else:
                 status_str = "? " + status[:10]
             
-            print(f"{timestamp:<20} {instances:>10} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
+            print(f"{timestamp:<20} {instances:>10} {model:>20} {gen_score:>9.1f}% {eval_str} {status_str:<12} {notes}")
         
         print("="*100)
     
@@ -158,7 +159,8 @@ class ScoreViewer:
             timestamp = entry.get("timestamp", "Unknown")[:10]
             eval_score = entry.get("evaluation_score", 0)
             instances = entry.get("num_instances", 0)
-            print(f"  {timestamp}: {eval_score:5.1f}% on {instances} instances")
+            model = entry.get("model", "unknown")
+            print(f"  {timestamp}: {model} -> {eval_score:5.1f}% on {instances} instances")
         
         # Calculate trend
         if len(evaluated) >= 3:
@@ -185,9 +187,9 @@ class ScoreViewer:
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = [
                 'timestamp', 'dataset', 'num_instances', 
-                'generation_score', 'evaluation_score', 
-                'evaluation_status', 'generation_time', 
-                'evaluation_time', 'notes'
+                'model', 'generation_score', 
+                'evaluation_score', 'evaluation_status', 
+                'generation_time', 'evaluation_time', 'notes'
             ]
             
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -208,7 +210,8 @@ class ScoreViewer:
                 pred_file = entry.get("prediction_file", "Unknown")
                 timestamp = entry.get("timestamp", "Unknown")
                 instances = entry.get("num_instances", 0)
-                pending.append((timestamp, pred_file, instances))
+                model = entry.get("model", "unknown")
+                pending.append((timestamp, pred_file, instances, model))
         
         if not pending:
             print("\n✅ All runs have been evaluated!")
@@ -218,7 +221,7 @@ class ScoreViewer:
         print(f"PENDING EVALUATIONS ({len(pending)} runs)")
         print("="*60)
         
-        for timestamp, pred_file, instances in pending:
+        for timestamp, pred_file, instances, model in pending:
             filename = Path(pred_file).name if pred_file != "Unknown" else "Unknown"
             print(f"  {timestamp[:19]}: {filename} ({instances} instances)")
         
